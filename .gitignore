@@ -2,4 +2,5 @@
 /app.db
 /config.py
 /__pycache__/
+app/__pycache__
 
