@@ -9,11 +9,11 @@
     <body>
         <div>
             DPDSS:
-	    <a href="{{ url_for('index') }}">Home</a>
+	    <a href="{{ url_for('main_bp.index') }}">Home</a>
 	    {% if current_user.is_anonymous %}
-	    <a href="{{ url_for('login') }}">Login</a>
+	    <a href="{{ url_for('auth_bp.login') }}">Login</a>
 	    {% else %}
-	    <a href="{{ url_for('logout') }}">Logout</a>
+	    <a href="{{ url_for('main_bp.logout') }}">Logout</a>
 	    {% endif %}
         </div>
         <hr>
