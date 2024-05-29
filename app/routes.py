@@ -1,4 +1,4 @@
-from flask import render_template, flash ,redirect, request, url_for, Blueprint, jsonify
+from flask import render_template, flash ,redirect, request, url_for, Blueprint, jsonify, current_app
 #from app import app
 from app.forms import LoginForm, RegistrationForm
 from flask_login import current_user, login_user, login_required, logout_user
@@ -9,7 +9,8 @@ from urllib.parse import urlsplit
 from flask_jwt_extended import jwt_required, get_jwt_identity
 from .models import User
 from . import db
-
+from werkzeug.utils import secure_filename
+import os
 
 main_bp = Blueprint('main_bp', __name__)
 
@@ -43,3 +44,24 @@ def user_list():
 def user_create():
     pass 
 
+@main_bp.route('/upload_get')
+def upload_file():
+    return render_template('upload.html')
+
+@main_bp.route('/upload', methods=['POST'])
+def uploadfile():
+    if 'file' not in request.files:
+        return jsonify({'message': 'No file part'}), 404
+
+    file = request.files['file']
+    if file.filename == '':
+        return jsonify({'message': 'No selected file'})
+
+    if file:
+        filename = secure_filename(file.filename)
+        upload_folder =  os.path.join(current_app.root_path, 'uploads')
+        os.makedirs(upload_folder, exist_ok=True)
+        file.save(os.path.join(upload_folder, filename))
+        return jsonify({'message': 'File uploaded successful'}), 200
+
+   

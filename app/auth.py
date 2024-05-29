@@ -6,8 +6,12 @@ import os
 from dotenv import load_dotenv
 from app.forms import LoginForm, RegistrationForm
 from flask_login import current_user, login_user, login_required, logout_user
+from .utils import data_encrypt
 
-load_dotenv()
+
+#data_encrypt('test string')
+print(data_encrypt)
+
 auth_bp= Blueprint('auth_bp', __name__)
 
 #SECRET = os.getenv('SECRET')
@@ -21,6 +25,7 @@ auth_bp= Blueprint('auth_bp', __name__)
 @auth_bp.route('/login', methods=['GET', 'POST'])
 def login():
     if request.method == 'GET':
+
         return render_template('register.html', title='Register', form=RegistrationForm())
     data = request.get_json()
     username = data['username']
@@ -70,6 +75,20 @@ def register():
         flash('Congrats! You are now a registered user!')
         return redirect(url_for('auth_bp.login'))
     return render_template('register.html', title='Register', form=form)
+
+
+auth_bp.route('/upload', methods=['POST'])
+@jwt_required()
+def upload_encrypted_data():
+   with open(file_path, 'rb') as f:
+       file_content = f.read()
+
+   encrypted_data_dict = data_encrypt(file_content)
+    # logic to upload the file to ipfs
+
+   os.remove(file_path)
+
+   return jsonify({'message': 'File uploaded and encrypted successfully'}), 200
 
 
 
