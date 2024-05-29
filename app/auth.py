@@ -20,15 +20,6 @@ def login():
         return redirect(url_for('main_bp.index'))
 
         
-#        data = request.get_json()
-#        username = data['username']
-#        password = data['password']
-#        user = User.query.filter_by(username=username).first()
-#        if user and user.check_password(password):
-#            access_token = create_access_token(identity=user.id)
-#            return jsonify(access_token=access_token), 200
-#        else:
-#            return jsonify(message="Invalid credentials"), 401
 
 
     if request.method == 'POST':
@@ -43,6 +34,9 @@ def login():
             next_page = request.args.get('next')
             if not next_page or urlsplit(next_page).netloc != '':
                 next_page = url_for('main_bp.index')
+                access_token = create_access_token(identity=user.id)
+                #need to store the jwt with user id for further
+                #use. implement logic here.
                 return redirect(next_page)
     return render_template('login.html', title='Sign In', form=LoginForm())
 
