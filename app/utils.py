@@ -1,6 +1,9 @@
 from cryptography.fernet import Fernet
 import base64
 
+
+
+
 def data_encrypt(data):
     key = Fernet.generate_key()
     cipher_suite = Fernet(key)

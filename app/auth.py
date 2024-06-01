@@ -1,4 +1,4 @@
-from flask import render_template, Flask, request, jsonify, session, redirect, url_for, Blueprint, flash
+from flask import render_template, Flask, request, jsonify, session, redirect, url_for, Blueprint, flash, make_response
 from flask_jwt_extended import JWTManager, create_access_token, jwt_required, get_jwt_identity, get_jwt
 from .models import User
 from . import db, bcrypt
@@ -6,8 +6,14 @@ import os
 from dotenv import load_dotenv
 from app.forms import LoginForm, RegistrationForm
 from flask_login import current_user, login_user, login_required, logout_user
-from .utils import data_encrypt
+from .utils import data_encrypt 
 import sqlalchemy as sa
+
+def create_jwt():
+    access_token = create_access_token(identity=current_user.id)
+    response = make_response(redirect(url_for('auth_bp.upload')))
+    response.set_cookie('access_token_cookie', access_token, httponly=True, secure=True, samesite='Lax')
+    return response
 
 
 jwt = JWTManager()
@@ -16,11 +22,12 @@ auth_bp= Blueprint('auth_bp', __name__)
 @login_required
 @auth_bp.route('/login', methods=['GET', 'POST'])
 def login():
-    form = LoginForm(request.form)
     if current_user.is_authenticated:
-        return redirect(url_for('main_bp.index'))
+        response = create_jwt()
+        print(response)
+        return response
     
-
+    form = LoginForm(request.form)
     if request.method == 'POST':
         if form.validate_on_submit():
             user = db.session.scalar(
@@ -29,13 +36,13 @@ def login():
                 flash('Invalid username or password')
                 return redirect(url_for('auth_bp.login'))
             login_user(user, remember=form.remember_me.data)
+            response = create_jwt()
             next_page = request.args.get('next')
             if not next_page or urlsplit(next_page).netloc != '':
                 next_page = url_for('main_bp.index')
-                session['jwt'] = create_access_token(identity=user.id)      
                 #need to store the jwt with user id for further
                 #use. implement logic here.
-                return redirect(url_for('auth_bp.upload')), 200
+                return response
             
     return render_template('login.html', title='Sign In', form=LoginForm())
 
@@ -73,6 +80,7 @@ def upload():
                 file_content = f.read()
                 encrypted_data_dict = data_encrypt(file_content)
                 #logic to upload the file to ipfs
+
                 os.remove(file_path)
                 return jsonify({'message': 'File uploaded and encrypted successfully'}), 200
         else:
