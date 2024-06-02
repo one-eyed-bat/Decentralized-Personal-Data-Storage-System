@@ -4,7 +4,7 @@ import base64
 
 
 
-def data_encrypt(data):
+def data_encrypt(data, user_id):
     key = Fernet.generate_key()
     cipher_suite = Fernet(key)
 
@@ -17,7 +17,8 @@ def data_encrypt(data):
     encrypted_dict = {
             'encrypted_data': encrypted_data_b64,
             'key': key_b64,
-            'type': data_type
+            'type': data_type,
+            'user_id': user_id
             }
     return encrypted_dict
 
