@@ -3,10 +3,11 @@ from flask_session import Session
 from .models import User
 from . import db, bcrypt
 import os
+import json
 from dotenv import load_dotenv
 from app.forms import LoginForm, RegistrationForm
 from flask_login import current_user, login_user, login_required, logout_user
-from .utils import data_encrypt 
+from .utils import data_encrypt, data_decrypt 
 import sqlalchemy as sa
 from werkzeug.utils import secure_filename
 from config import basedir
@@ -86,20 +87,47 @@ def upload():
             file_content = f.read()
             encrypted_data_dict = data_encrypt(file_content, user_id)
             encrypted_data = encrypted_data_dict['encrypted_data']
-            cid = ipfs_api.publish(file_path)
+            #cid = ipfs_api.publish(file_path)
             encrypted_file_path = os.path.join(upload_folder, f"encrypted_{filename}")
-            with open(encrypted_file_path, 'wb') as f:
-                f.write(b'encrypted_data')
+            with open(encrypted_file_path, 'w') as f:
+                f.write(encrypted_data)
             print("written data?", encrypted_data)
 
-            user_id.data_hash = cid
-            print(user_name, user_id, cid)
-
-            os.remove(file_path)
+            #user_id.data_hash = cid
+            print('ipfs id is: ', ipfs_api.my_id())
+            with open(os.path.join(upload_folder, 'encrypted_data_dict.json'), 'w') as f:
+                json.dump(encrypted_data_dict, f)
+            return render_template('decrypt.html')
+            '''os.remove(file_path)
             print(cid, user_name, filename)
-            return jsonify({'message': 'File uploaded and encrypted successfully'}), 200
+            return jsonify({'message': 'File uploaded and encrypted successfully'}), 200'''
     if request.method == 'GET':
         return render_template('upload.html')
 
+@auth_bp.route('/decrypt', methods=['GET', 'POST'])
+def decrypt():
+    if request.method == 'POST':
+        print("session at upload func is: ", session)
+        user_name = session.get('username')
+        user_id = session.get('userid')
+        print("Username is: ",user_name, "user ID is: ",user_id )
+        if not user_id:
+            print("couldn't find session userid")
+        else:
+            print("userid from session is: ", user_id)
 
+        if 'file' not in request.files:
+            return jsonify({'message': 'No file part'}), 404
 
+        file = request.files['file']
+        filename = file.filename
+        upload_folder =  os.path.join(basedir, 'uploads')
+        file_path = os.path.join(upload_folder, filename) 
+        
+        with open(file_path, 'rb') as f:
+            decrypted_data_dict = json.load(f)
+            decrypted_data = data_decrypt(decrypted_data_dict)
+            print("written data: ", decrypted_data)
+        return render_template('upload.html')
+    if request.method == 'GET':
+        return render_template('decrypt.html')
