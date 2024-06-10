@@ -1,4 +1,5 @@
 from flask import render_template, Flask, request, jsonify, session, redirect, url_for, Blueprint, flash, make_response
+from flask_session import Session
 from .models import User
 from . import db, bcrypt
 import os
@@ -7,18 +8,15 @@ from app.forms import LoginForm, RegistrationForm
 from flask_login import current_user, login_user, login_required, logout_user
 from .utils import data_encrypt 
 import sqlalchemy as sa
-
-
-def create_jwt():
-    access_token = create_access_token(identity=current_user.id)
-
+from werkzeug.utils import secure_filename
+from config import basedir
+import ipfs_api
 
 auth_bp= Blueprint('auth_bp', __name__)
 
 @auth_bp.route('/login', methods=['GET', 'POST'])
 def login():
     if current_user.is_authenticated:
-        print(response)
         return render_template('upload.html')
     form = LoginForm(request.form)
     if request.method == 'POST':
@@ -29,11 +27,13 @@ def login():
                 flash('Invalid username or password')
                 return redirect(url_for('auth_bp.login'))
             login_user(user)
-            next_page = request.args.get('next')
-            if not next_page or urlsplit(next_page).netloc != '':
-                next_page = url_for('main_bp.index')
-                return next_page 
-            return render_template('login.html', title='Sign In', form=LoginForm())
+            session['username'] = user.username
+            session['userid'] = user.id
+            print(session)
+            return render_template('upload.html')
+        print(form.errors)
+        print("form not validated properly??")
+        return render_template('login.html')
     return render_template('login.html', title='Sign in', form=LoginForm())
 
 @auth_bp.route('/register', methods=['GET', 'POST'])
@@ -58,15 +58,16 @@ def register():
 
 @auth_bp.route('/upload', methods=['GET', 'POST'])
 def upload():
+    
     if request.method == 'POST':
-        print(user_id)
-        user_id = get_jwt_identity()
+        print("session at upload func is: ", session)
+        user_name = session.get('username')
+        user_id = session.get('userid')
+        print("Username is: ",user_name, "user ID is: ",user_id )
         if not user_id:
-            return jsonify({'message': 'No JWT'})
-
-        user = User.query.get(user_id)
-        if not user:
-            return jsonify({'message': 'User not found'})
+            print("couldn't find session userid")
+        else:
+            print("userid from session is: ", user_id)
 
         if 'file' not in request.files:
             return jsonify({'message': 'No file part'}), 404
@@ -76,7 +77,7 @@ def upload():
             return jsonify({'message': 'No selected file'})
        
         filename = secure_filename(file.filename)
-        upload_folder =  os.path.join(current_app.root_path, 'uploads')
+        upload_folder =  os.path.join(basedir, 'uploads')
         os.makedirs(upload_folder, exist_ok=True)
         file_path = os.path.join(upload_folder, filename) 
         file.save(file_path)
@@ -84,9 +85,15 @@ def upload():
         with open(file_path, 'rb') as f:
             file_content = f.read()
             encrypted_data_dict = data_encrypt(file_content, user_id)
-            cid = ipfs_api.publish(file)
-            user_name = user_id.name
+            encrypted_data = encrypted_data_dict['encrypted_data']
+            cid = ipfs_api.publish(file_path)
+            encrypted_file_path = os.path.join(upload_folder, f"encrypted_{filename}")
+            with open(encrypted_file_path, 'wb') as f:
+                f.write(b'encrypted_data')
+            print("written data?", encrypted_data)
+
             user_id.data_hash = cid
+            print(user_name, user_id, cid)
 
             os.remove(file_path)
             print(cid, user_name, filename)

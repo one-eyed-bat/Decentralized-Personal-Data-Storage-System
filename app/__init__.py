@@ -17,6 +17,7 @@ def create_app(config_class=Config):
     app = Flask(__name__)
     load_dotenv()
     app.config.from_object(config_class)
+    print(app)
     bcrypt.init_app(app)
     db.init_app(app)
     login.init_app(app)
@@ -30,7 +31,9 @@ def create_app(config_class=Config):
     app.register_blueprint(auth_blueprint)
     
     
-
+    with app.app_context():
+           db.create_all()
+           print("All tables created successfully.")
     return app
 
 

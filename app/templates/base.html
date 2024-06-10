@@ -12,6 +12,7 @@
 	    <a href="{{ url_for('main_bp.index') }}">Home</a>
 	    {% if current_user.is_anonymous %}
 	    <a href="{{ url_for('auth_bp.login') }}">Login</a>
+	    <a href="{{ url_for('auth_bp.register') }}">Register</a>
 	    {% else %}
 	    <a href="{{ url_for('main_bp.logout') }}">Logout</a>
 	    <a href="{{ url_for('auth_bp.upload') }}">Upload</a>
