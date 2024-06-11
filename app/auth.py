@@ -7,7 +7,7 @@ import json
 from dotenv import load_dotenv
 from app.forms import LoginForm, RegistrationForm
 from flask_login import current_user, login_user, login_required, logout_user
-from .utils import data_encrypt, data_decrypt 
+from .utils import data_encrypt, data_decrypt, dict_to_mongodb, decrypt_mongodb
 import sqlalchemy as sa
 from werkzeug.utils import secure_filename
 from config import basedir
@@ -87,18 +87,27 @@ def upload():
             file_content = f.read()
             encrypted_data_dict = data_encrypt(file_content, user_id)
             encrypted_data = encrypted_data_dict['encrypted_data']
-            #cid = ipfs_api.publish(file_path)
+            dbname =  dict_to_mongodb(encrypted_data_dict, user_name)
+            print(dbname)
+
+
+            return render_template('upload.html')
+
+
+
+
+            '''#cid = ipfs_api.publish(file_path)
             encrypted_file_path = os.path.join(upload_folder, f"encrypted_{filename}")
             with open(encrypted_file_path, 'w') as f:
                 f.write(encrypted_data)
             print("written data?", encrypted_data)
-
+            dict_to_mongodb
             #user_id.data_hash = cid
             print('ipfs id is: ', ipfs_api.my_id())
             with open(os.path.join(upload_folder, 'encrypted_data_dict.json'), 'w') as f:
                 json.dump(encrypted_data_dict, f)
             return render_template('decrypt.html')
-            '''os.remove(file_path)
+            os.remove(file_path)
             print(cid, user_name, filename)
             return jsonify({'message': 'File uploaded and encrypted successfully'}), 200'''
     if request.method == 'GET':
@@ -106,8 +115,8 @@ def upload():
 
 @auth_bp.route('/decrypt', methods=['GET', 'POST'])
 def decrypt():
-    if request.method == 'POST':
-        print("session at upload func is: ", session)
+    user_input = input("retrieve data?")
+    if user_input == "yes":
         user_name = session.get('username')
         user_id = session.get('userid')
         print("Username is: ",user_name, "user ID is: ",user_id )
@@ -115,10 +124,12 @@ def decrypt():
             print("couldn't find session userid")
         else:
             print("userid from session is: ", user_id)
+        
 
-        if 'file' not in request.files:
-            return jsonify({'message': 'No file part'}), 404
-
+        en_dict = decrypt_mongodb(user_id, user_name)
+        print("at decrypt funciton, returning encrypted dict", en_dict)
+        
+        return render_template('upload.html')
         file = request.files['file']
         filename = file.filename
         upload_folder =  os.path.join(basedir, 'uploads')
