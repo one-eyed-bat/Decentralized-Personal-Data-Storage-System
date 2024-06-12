@@ -39,7 +39,6 @@ def create_app(config_class=Config):
     from app.auth import auth_bp as auth_blueprint
     app.register_blueprint(auth_blueprint)
     
-    
     with app.app_context():
            db.create_all()
            print("All tables created successfully.")

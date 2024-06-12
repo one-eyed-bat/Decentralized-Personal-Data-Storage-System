@@ -1,10 +1,12 @@
 from cryptography.fernet import Fernet
 import base64
-from pymongo_get_database import get_database
 from config import Config
 
 config = Config()
 client = config.CLIENT
+uri = config.URI
+db = client["encryptedictkey"]
+
 def data_encrypt(data, user_id):
     key = Fernet.generate_key()
     f = Fernet(key)
@@ -36,17 +38,15 @@ def data_decrypt(encrypted_dict):
     return data
     pass
 
+
 def dict_to_mongodb(user_dict, username):
-    dbname = get_database()
-    collection_name = dbname[username]
+    collection_name = db[username]
     collection_name.insert_one(user_dict)
     print("dict added to ", username)
-    return dbname
 
 def decrypt_mongodb(userid, collection):
     #user_id = {"user_id": userid}
     print("before en_dict query")
-    db = client["encryptedictkey"]
     col = db[collection]
      
     en_dict = col.find({}, {"_id": 0, "encrypted_data" : 1,  "type": 1})

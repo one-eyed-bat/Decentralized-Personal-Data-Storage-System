@@ -31,10 +31,10 @@ def login():
             session['username'] = user.username
             session['userid'] = user.id
             print(session)
-            return render_template('upload.html')
+            return redirect(url_for('auth_bp.upload'))
         print(form.errors)
         print("form not validated properly??")
-        return render_template('login.html')
+        return redirect(url_for('auth_bp.login'))
     return render_template('login.html', title='Sign in', form=LoginForm())
 
 @auth_bp.route('/register', methods=['GET', 'POST'])
@@ -59,7 +59,7 @@ def register():
 
 @auth_bp.route('/upload', methods=['GET', 'POST'])
 def upload():
-    
+    print("session at the start of the uplaod function: ",  session)
     if request.method == 'POST':
         print("session at upload func is: ", session)
         user_name = session.get('username')
@@ -87,30 +87,15 @@ def upload():
             file_content = f.read()
             encrypted_data_dict = data_encrypt(file_content, user_id)
             encrypted_data = encrypted_data_dict['encrypted_data']
-            dbname =  dict_to_mongodb(encrypted_data_dict, user_name)
+            dict_to_mongodb(encrypted_data_dict, user_name)
             print(dbname)
 
-
-            return render_template('upload.html')
-
+            return render_template('encrypt.html')
 
 
 
-            '''#cid = ipfs_api.publish(file_path)
-            encrypted_file_path = os.path.join(upload_folder, f"encrypted_{filename}")
-            with open(encrypted_file_path, 'w') as f:
-                f.write(encrypted_data)
-            print("written data?", encrypted_data)
-            dict_to_mongodb
-            #user_id.data_hash = cid
-            print('ipfs id is: ', ipfs_api.my_id())
-            with open(os.path.join(upload_folder, 'encrypted_data_dict.json'), 'w') as f:
-                json.dump(encrypted_data_dict, f)
-            return render_template('decrypt.html')
-            os.remove(file_path)
-            print(cid, user_name, filename)
-            return jsonify({'message': 'File uploaded and encrypted successfully'}), 200'''
     if request.method == 'GET':
+        print("session is: ", session)
         return render_template('upload.html')
 
 @auth_bp.route('/decrypt', methods=['GET', 'POST'])
