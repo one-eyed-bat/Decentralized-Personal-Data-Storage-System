@@ -15,7 +15,10 @@ func DownloadFile(cid *C.char) *C.char {
 	if err != nil {
 		return C.Cstring("")
 	}
-	return C.Cstring(string(data))
+	cData := C.CBytes(data)
+	return (*C.char)(cData)
+
+}
 
 
 func main() {}
