@@ -1,17 +1,19 @@
-from flask import render_template, Flask, request, jsonify, session, redirect, url_for, Blueprint, flash, make_response
+from flask import render_template, Flask, request, jsonify, session, redirect, url_for, Blueprint, flash, make_response, Response
 from flask_session import Session
 from .models import User
 from . import db, bcrypt
-import os
-import json
 from dotenv import load_dotenv
 from app.forms import LoginForm, RegistrationForm
 from flask_login import current_user, login_user, login_required, logout_user
 from .utils import data_encrypt, data_decrypt, dict_to_mongodb, decrypt_mongodb
-import sqlalchemy as sa
 from werkzeug.utils import secure_filename
-from config import basedir
+from config import basedir, Config
+import requests
 import ipfs_api
+import os
+import json
+import sqlalchemy as sa
+
 
 auth_bp= Blueprint('auth_bp', __name__)
 
@@ -28,9 +30,11 @@ def login():
                 flash('Invalid username or password')
                 return redirect(url_for('auth_bp.login'))
             login_user(user)
+            print("pre session clearing: ", session)
             session['username'] = user.username
             session['userid'] = user.id
-            print(session)
+            session.modified = True
+            print("after session update ", session)
             return redirect(url_for('auth_bp.upload'))
         print(form.errors)
         print("form not validated properly??")
@@ -55,18 +59,17 @@ def register():
         return redirect(url_for('auth_bp.login'))
     return render_template('register.html', title='Register', form=form)
 
-
-
 @auth_bp.route('/upload', methods=['GET', 'POST'])
 def upload():
     print("session at the start of the uplaod function: ",  session)
     if request.method == 'POST':
-        print("session at upload func is: ", session)
+        print("session at POST method is: ", session)
         user_name = session.get('username')
         user_id = session.get('userid')
         print("Username is: ",user_name, "user ID is: ",user_id )
         if not user_id:
             print("couldn't find session userid")
+            return redirect(url_for('auth_bp.login'))
         else:
             print("userid from session is: ", user_id)
 
@@ -87,15 +90,28 @@ def upload():
             file_content = f.read()
             encrypted_data_dict = data_encrypt(file_content, user_id)
             encrypted_data = encrypted_data_dict['encrypted_data']
-            dict_to_mongodb(encrypted_data_dict, user_name)
-            print(dbname)
+            encrypted_file_path = file_path + '.enc'
+        with open(encrypted_file_path, 'w') as f:
+            f.write(encrypted_data)
+            os.remove(file_path)
 
-            return render_template('encrypt.html')
-
+        print("ipfs id is: ", ipfs_api.my_id())
+        cid = ipfs_api.publish(encrypted_file_path)
+        print("cid is: ", cid)
+        user = db.session.scalar(
+               sa.select(User).where(User.username == user_name))
+        print("user at upload func is: ", user)
+        user.data_hash = cid
+        db.session.commit()
+        encrypted_data_dict.pop('encrypted_data')
+        print("after popping dict ", encrypted_data_dict)
+        dict_to_mongodb(encrypted_data_dict, user_name)
+        os.remove(encrypted_file_path) 
+        return redirect(url_for('auth_bp.decrypt'))
 
 
     if request.method == 'GET':
-        print("session is: ", session)
+        print("session at GET method is: ", session)
         return render_template('upload.html')
 
 @auth_bp.route('/decrypt', methods=['GET', 'POST'])
@@ -109,21 +125,28 @@ def decrypt():
             print("couldn't find session userid")
         else:
             print("userid from session is: ", user_id)
-        
-
+        user = db.session.scalar(
+                sa.select(User).where(User.username == user_name))
+        print("user is: ", user)
+ 
+        cid = user.data_hash
+        print("user retirieved CID is: ", cid)
         en_dict = decrypt_mongodb(user_id, user_name)
-        print("at decrypt funciton, returning encrypted dict", en_dict)
-        
-        return render_template('upload.html')
-        file = request.files['file']
-        filename = file.filename
-        upload_folder =  os.path.join(basedir, 'uploads')
-        file_path = os.path.join(upload_folder, filename) 
-        
-        with open(file_path, 'rb') as f:
-            decrypted_data_dict = json.load(f)
-            decrypted_data = data_decrypt(decrypted_data_dict)
-            print("written data: ", decrypted_data)
-        return render_template('upload.html')
-    if request.method == 'GET':
+        print("at decrypt funciton, returning encrypted dict")
+        gateway = 'https://ipfs.io/ipfs/'
+        file_url = f'{gateway}{cid}'
+        response = requests.get(file_url)
+        print(response)
+        if response.status_code == 200:
+            data = response.content
+            print("at decryption with the data")
+
+            de_data = data_decrypt(en_dict, data)
+            upload_folder =  os.path.join(basedir, 'uploads')
+            file_path = os.path.join(upload_folder, user_name) 
+            
+            with open(file_path + 'decrypted', 'wb') as f:
+                f.write(de_data)
+            return redirect(url_for('auth_bp.upload')) 
+    if  request.method == 'GET':
         return render_template('decrypt.html')
