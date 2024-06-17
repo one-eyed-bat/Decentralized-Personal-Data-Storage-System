@@ -7,7 +7,7 @@ client = config.CLIENT
 uri = config.URI
 db = client["encryptedictkey"]
 
-def data_encrypt(data, user_id):
+def data_encrypt(data, user_id, filename):
     key = Fernet.generate_key()
     f = Fernet(key)
     encrypted_data = f.encrypt(data)
@@ -17,6 +17,7 @@ def data_encrypt(data, user_id):
             'encrypted_data': encrypted_data_b64,
             'key': key_b64,
             'user_id': user_id,
+            'file_name': filename,
             }
     return encrypted_dict
 
@@ -37,12 +38,12 @@ def dict_to_mongodb(user_dict, username):
     collection_name.insert_one(user_dict)
     print("dict added to ", username)
 
-def decrypt_mongodb(userid, collection):
+def decrypt_mongodb(userid, collection, filename):
     print("before en_dict query")
     col = db[collection]
     print("col is: ", col, " collection is: ", collection)
  
-    en_dict = col.find_one({})
+    en_dict = col.find_one({'file_nmae': filename})
     print("after en_dict query", en_dict)
     return en_dict
      

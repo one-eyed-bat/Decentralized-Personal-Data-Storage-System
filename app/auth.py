@@ -88,7 +88,8 @@ def upload():
         
         with open(file_path, 'rb') as f:
             file_content = f.read()
-            encrypted_data_dict = data_encrypt(file_content, user_id)
+            encrypted_data_dict = data_encrypt(file_content, user_id, filename)
+            print("file saved as: ", filename, " Remember the file name for later retrieval")
             encrypted_data = encrypted_data_dict['encrypted_data']
             encrypted_file_path = file_path + '.enc'
         with open(encrypted_file_path, 'w') as f:
@@ -116,37 +117,36 @@ def upload():
 
 @auth_bp.route('/decrypt', methods=['GET', 'POST'])
 def decrypt():
-    user_input = input("retrieve data?")
-    if user_input == "yes":
-        user_name = session.get('username')
-        user_id = session.get('userid')
-        print("Username is: ",user_name, "user ID is: ",user_id )
-        if not user_id:
-            print("couldn't find session userid")
-        else:
-            print("userid from session is: ", user_id)
-        user = db.session.scalar(
-                sa.select(User).where(User.username == user_name))
-        print("user is: ", user)
- 
-        cid = user.data_hash
-        print("user retirieved CID is: ", cid)
-        en_dict = decrypt_mongodb(user_id, user_name)
-        print("at decrypt funciton, returning encrypted dict")
-        gateway = 'https://ipfs.io/ipfs/'
-        file_url = f'{gateway}{cid}'
-        response = requests.get(file_url)
-        print(response)
-        if response.status_code == 200:
-            data = response.content
-            print("at decryption with the data")
-
-            de_data = data_decrypt(en_dict, data)
-            upload_folder =  os.path.join(basedir, 'uploads')
-            file_path = os.path.join(upload_folder, user_name) 
-            
-            with open(file_path + 'decrypted', 'wb') as f:
-                f.write(de_data)
-            return redirect(url_for('auth_bp.upload')) 
     if  request.method == 'GET':
         return render_template('decrypt.html')
+    filename = request.form['filename']
+    user_name = session.get('username')
+    user_id = session.get('userid')
+    print("filename: ", filename, " user name ", user_name)
+    if not user_id:
+        print("couldn't find session userid")
+    else:
+        print("userid from session is: ", user_id)
+    user = db.session.scalar(
+            sa.select(User).where(User.username == user_name))
+    print("user is: ", user)
+    cid = user.data_hash
+    print("user retirieved CID is: ", cid)
+    en_dict = decrypt_mongodb(user_id, user_name, filename)
+    print("at decrypt funciton, returning encrypted dict")
+    gateway = 'https://ipfs.io/ipfs/'
+    file_url = f'{gateway}{cid}'
+    response = requests.get(file_url)
+    print(response)
+    if response.status_code == 200:
+        data = response.content
+        print("at decryption with the data")
+
+        de_data = data_decrypt(en_dict, data)
+        upload_folder =  os.path.join(basedir, 'uploads')
+        file_path = os.path.join(upload_folder, user_name) 
+        
+        with open(file_path + 'decrypted', 'wb') as f:
+            f.write(de_data)
+        return redirect(url_for('auth_bp.upload')) 
+    
