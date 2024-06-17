@@ -1,10 +1,10 @@
 /venv/
 /app.db
-/config.py
 /__pycache__/
 app/__pycache__
 /.flaskenv
 pymongo_get_database.py
 pymongo_test_insert.py
 /uploads/
+/keys
 
