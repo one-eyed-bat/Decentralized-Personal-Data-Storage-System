@@ -43,7 +43,7 @@ def decrypt_mongodb(userid, collection, filename):
     col = db[collection]
     print("col is: ", col, " collection is: ", collection)
  
-    en_dict = col.find_one({'file_nmae': filename})
+    en_dict = col.find_one({'file_name': filename})
     print("after en_dict query", en_dict)
     return en_dict
      

@@ -119,34 +119,35 @@ def upload():
 def decrypt():
     if  request.method == 'GET':
         return render_template('decrypt.html')
-    filename = request.form['filename']
-    user_name = session.get('username')
-    user_id = session.get('userid')
-    print("filename: ", filename, " user name ", user_name)
-    if not user_id:
-        print("couldn't find session userid")
-    else:
-        print("userid from session is: ", user_id)
-    user = db.session.scalar(
-            sa.select(User).where(User.username == user_name))
-    print("user is: ", user)
-    cid = user.data_hash
-    print("user retirieved CID is: ", cid)
-    en_dict = decrypt_mongodb(user_id, user_name, filename)
-    print("at decrypt funciton, returning encrypted dict")
-    gateway = 'https://ipfs.io/ipfs/'
-    file_url = f'{gateway}{cid}'
-    response = requests.get(file_url)
-    print(response)
-    if response.status_code == 200:
-        data = response.content
-        print("at decryption with the data")
+    if request.method == 'POST':
+        filename = request.form['filename']
+        user_name = session.get('username')
+        user_id = session.get('userid')
+        print("filename: ", filename, " user name ", user_name)
+        if not user_id:
+            print("couldn't find session userid")
+        else:
+            print("userid from session is: ", user_id)
+        user = db.session.scalar(
+                sa.select(User).where(User.username == user_name))
+        print("user is: ", user)
+        cid = user.data_hash
+        print("user retirieved CID is: ", cid)
+        en_dict = decrypt_mongodb(user_id, user_name, filename)
+        print("at decrypt funciton, returning encrypted dict")
+        gateway = 'https://ipfs.io/ipfs/'
+        file_url = f'{gateway}{cid}'
+        response = requests.get(file_url)
+        print(response)
+        if response.status_code == 200:
+            data = response.content
+            print("at decryption with the data")
 
-        de_data = data_decrypt(en_dict, data)
-        upload_folder =  os.path.join(basedir, 'uploads')
-        file_path = os.path.join(upload_folder, user_name) 
+            de_data = data_decrypt(en_dict, data)
+            upload_folder =  os.path.join(basedir, 'uploads')
+            file_path = os.path.join(upload_folder, user_name) 
+            
+            with open(file_path + filename, 'wb') as f:
+                f.write(de_data)
+            return redirect(url_for('auth_bp.upload')) 
         
-        with open(file_path + 'decrypted', 'wb') as f:
-            f.write(de_data)
-        return redirect(url_for('auth_bp.upload')) 
-    

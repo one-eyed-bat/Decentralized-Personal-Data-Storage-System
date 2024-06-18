@@ -6,5 +6,5 @@ app/__pycache__
 pymongo_get_database.py
 pymongo_test_insert.py
 /uploads/
-/keys
+/bin/bash: line 1: q: command not found
 
