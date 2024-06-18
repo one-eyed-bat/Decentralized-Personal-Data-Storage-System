@@ -5,7 +5,7 @@ from . import db, bcrypt
 from dotenv import load_dotenv
 from app.forms import LoginForm, RegistrationForm
 from flask_login import current_user, login_user, login_required, logout_user
-from .utils import data_encrypt, data_decrypt, dict_to_mongodb, decrypt_mongodb
+from .utils import data_encrypt, data_decrypt, dict_to_mongodb, decrypt_mongodb, pin_by_cid
 from werkzeug.utils import secure_filename
 from config import basedir, Config
 import requests
@@ -14,9 +14,9 @@ import os
 import json
 import sqlalchemy as sa
 
+config = Config()
 
 auth_bp= Blueprint('auth_bp', __name__)
-
 @auth_bp.route('/login', methods=['GET', 'POST'])
 def login():
     if current_user.is_authenticated:
@@ -35,7 +35,7 @@ def login():
             session['userid'] = user.id
             session.modified = True
             print("after session update ", session)
-            return redirect(url_for('auth_bp.upload'))
+            return redirect(url_for('main_bp.user'))
         print(form.errors)
         print("form not validated properly??")
         return redirect(url_for('auth_bp.login'))
@@ -98,6 +98,7 @@ def upload():
 
         print("ipfs id is: ", ipfs_api.my_id())
         cid = ipfs_api.publish(encrypted_file_path)
+        pin_by_cid(cid)
         print("cid is: ", cid)
         user = db.session.scalar(
                sa.select(User).where(User.username == user_name))
@@ -115,7 +116,7 @@ def upload():
         print("session at GET method is: ", session)
         return render_template('upload.html')
 
-@auth_bp.route('/decrypt', methods=['GET', 'POST'])
+@auth_bp.route('/download', methods=['GET', 'POST'])
 def decrypt():
     if  request.method == 'GET':
         return render_template('decrypt.html')
@@ -126,12 +127,14 @@ def decrypt():
         print("filename: ", filename, " user name ", user_name)
         if not user_id:
             print("couldn't find session userid")
+            return url_for('auth_bp.login'))
         else:
             print("userid from session is: ", user_id)
         user = db.session.scalar(
                 sa.select(User).where(User.username == user_name))
         print("user is: ", user)
         cid = user.data_hash
+        
         print("user retirieved CID is: ", cid)
         en_dict = decrypt_mongodb(user_id, user_name, filename)
         print("at decrypt funciton, returning encrypted dict")
@@ -145,7 +148,7 @@ def decrypt():
 
             de_data = data_decrypt(en_dict, data)
             upload_folder =  os.path.join(basedir, 'uploads')
-            file_path = os.path.join(upload_folder, user_name) 
+            file_path = os.path.join(upload_folder, user_name + ' ') 
             
             with open(file_path + filename, 'wb') as f:
                 f.write(de_data)

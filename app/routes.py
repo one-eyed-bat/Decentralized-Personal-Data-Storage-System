@@ -1,4 +1,4 @@
-from flask import render_template, flash ,redirect, request, url_for, Blueprint, jsonify, current_app
+from flask import render_template, flash ,redirect, request, url_for, Blueprint, jsonify, current_app, session, url_for
 #from app import app
 from app.forms import LoginForm, RegistrationForm
 from flask_login import current_user, login_user, login_required, logout_user
@@ -29,8 +29,14 @@ def index():
 @main_bp.route('/logout')
 def logout():
     logout_user()
+    session.clear()
+    response = redirect(url_for('auth_bp.login'))
+    for key in request.cookies:
+        response.set_cookie(key, '', expires=0)
     return redirect(url_for('main_bp.index'))
-
+@main_bp.route('/user')
+def user():
+    return render_template("user.html")
 @main_bp.route("/users")
 def user_list():
     users = db.session.execute(db.select(User).order_by(User.username)).scalars()

@@ -1,11 +1,16 @@
 from cryptography.fernet import Fernet
 import base64
 from config import Config
+import requests
+import json
 
 config = Config()
 client = config.CLIENT
 uri = config.URI
 db = client["encryptedictkey"]
+PINATA_API = config.PINATA_API
+JWT = config.PINATA_JWT
+URL = config.PIN_URL
 
 def data_encrypt(data, user_id, filename):
     key = Fernet.generate_key()
@@ -31,6 +36,22 @@ def data_decrypt(encrypted_dict, data):
     data = f.decrypt(encrypted_data)
     print(" data: ", data)
     return data
+
+def pin_by_cid(cid):
+    headers = {
+            'Content-Type': 'application/json',
+            'Authorization': f'Bearer {JWT}'
+            }
+    data = {
+            'hashToPin': cid
+            }
+    try:
+        response = requests.post(URL, headers=headers,
+                data=json.dumps(data))
+        print(response.json())
+    except Exception as error:
+        print(error)
+    
 
 
 def dict_to_mongodb(user_dict, username):

@@ -17,4 +17,7 @@ class Config:
     IPFS_HTTP_CLIENT = f'/ip4/{IPFS_HOST}/tcp/{IPFS_PORT}/http'
     URI = os.environ.get('MONGODB_URI') 
     CLIENT = MongoClient(URI, server_api=ServerApi('1'))
+    PINATA_API = os.environ.get('PINATA_API')
+    PINATA_JWT = os.environ.get('JWT')
+    PIN_URL = "https://api.pinata.cloud/pinning/pinByHash"
 
