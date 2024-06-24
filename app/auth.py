@@ -2,7 +2,7 @@ from flask import render_template, Flask, request, jsonify, session, redirect, u
 from flask_session import Session
 from .models import User
 from . import db, bcrypt
-from dotenv import load_dotenv
+#from dotenv import load_dotenv
 from app.forms import LoginForm, RegistrationForm
 from flask_login import current_user, login_user, login_required, logout_user
 from .utils import data_encrypt, data_decrypt, dict_to_mongodb, decrypt_mongodb, pin_by_cid
@@ -31,6 +31,7 @@ def login():
                 return redirect(url_for('auth_bp.login'))
             login_user(user)
             print("pre session clearing: ", session)
+#            session.clear()
             session['username'] = user.username
             session['userid'] = user.id
             session.modified = True
@@ -109,8 +110,7 @@ def upload():
         print("after popping dict ", encrypted_data_dict)
         dict_to_mongodb(encrypted_data_dict, user_name)
         os.remove(encrypted_file_path) 
-        return redirect(url_for('auth_bp.decrypt'))
-
+        return redirect(url_for('main_bp.user'))
 
     if request.method == 'GET':
         print("session at GET method is: ", session)
@@ -121,27 +121,30 @@ def decrypt():
     if  request.method == 'GET':
         return render_template('decrypt.html')
     if request.method == 'POST':
+        print("at post request")
         filename = request.form['filename']
+        print(filename)
         user_name = session.get('username')
+        print("name is: ", user_name)
         user_id = session.get('userid')
         print("filename: ", filename, " user name ", user_name)
         if not user_id:
             print("couldn't find session userid")
-            return url_for('auth_bp.login'))
+            return redirect(url_for('auth_bp.login'))
         else:
             print("userid from session is: ", user_id)
         user = db.session.scalar(
-                sa.select(User).where(User.username == user_name))
-        print("user is: ", user)
+                sa.select(User).where(User.id == user_id))
+        #print("user is: ", user)
         cid = user.data_hash
         
-        print("user retirieved CID is: ", cid)
+        #print("user retirieved CID is: ", cid)
         en_dict = decrypt_mongodb(user_id, user_name, filename)
-        print("at decrypt funciton, returning encrypted dict")
+        #print("at decrypt funciton, returning encrypted dict")
         gateway = 'https://ipfs.io/ipfs/'
         file_url = f'{gateway}{cid}'
         response = requests.get(file_url)
-        print(response)
+        #print(response)
         if response.status_code == 200:
             data = response.content
             print("at decryption with the data")
@@ -152,5 +155,5 @@ def decrypt():
             
             with open(file_path + filename, 'wb') as f:
                 f.write(de_data)
-            return redirect(url_for('auth_bp.upload')) 
+            return redirect(url_for('main_bp.user')) 
         

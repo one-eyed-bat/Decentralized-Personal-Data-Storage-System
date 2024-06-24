@@ -29,12 +29,11 @@ def data_encrypt(data, user_id, filename):
 def data_decrypt(encrypted_dict, data):
     key_64 = encrypted_dict['key']
     data = data
-    print("data in data_decrypt function: ", data)
     key = base64.b64decode(key_64)
     f = Fernet(key)
     encrypted_data = base64.b64decode(data)
     data = f.decrypt(encrypted_data)
-    print(" data: ", data)
+    #print(" data: ", data)
     return data
 
 def pin_by_cid(cid):
